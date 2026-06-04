@@ -1,4 +1,3 @@
-import app.core.config as config_module
 from app.api import deps
 from app.services.ratelimit import RateLimiter
 
@@ -14,7 +13,7 @@ async def test_sliding_window_blocks_after_limit(fake_redis):
 async def test_rate_limited_endpoint_returns_429(client, fake_redis):
     # 把限流阈值调到 2，第 3 次请求应被限流
     call_count = [0]  # 使用列表以在闭包中修改
-    
+
     async def override_get_rate_limiter():
         call_count[0] += 1
         limiter = RateLimiter(fake_redis, limit=2, window=60)
@@ -32,17 +31,17 @@ async def test_rate_limited_endpoint_returns_429(client, fake_redis):
             data={"username": "x@example.com", "password": "whatever"},
         )
         statuses.append(resp.status_code)
-        print(f"DEBUG: Request {i+1} - Status: {resp.status_code}")
+        print(f"DEBUG: Request {i + 1} - Status: {resp.status_code}")
 
     print(f"DEBUG: All statuses: {statuses}")
     print(f"DEBUG: get_rate_limiter was called {call_count[0]} times")
-    
+
     # 直接测试限流器看看是否正常工作
     limiter = RateLimiter(fake_redis, limit=2, window=60)
     r1 = await limiter.hit("test:/api/v1/auth/login:127.0.0.1")
     r2 = await limiter.hit("test:/api/v1/auth/login:127.0.0.1")
     r3 = await limiter.hit("test:/api/v1/auth/login:127.0.0.1")
     print(f"DEBUG: Direct limiter test - r1={r1}, r2={r2}, r3={r3}")
-    
+
     assert statuses[-1] == 429
     assert 429 not in statuses[:2]

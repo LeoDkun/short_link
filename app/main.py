@@ -1,36 +1,49 @@
 # 导入异步迭代器类型注解，用于 lifespan 函数的返回类型
 from collections.abc import AsyncIterator
+
 # 导入异步上下文管理器装饰器，用于定义应用的生命周期
 from contextlib import asynccontextmanager
+
+# 导入静态文件和SPA路由支持
+from pathlib import Path
+
 # 导入 UUID 生成函数，用于生成唯一的请求 ID
 from uuid import uuid4
 
 # 导入结构化日志库，提供更强大的日志记录功能
 import structlog
+
 # 导入 FastAPI 核心类和 Request 对象
 from fastapi import FastAPI, Request
+
 # 导入 CORS 中间件，用于处理跨域请求
 from fastapi.middleware.cors import CORSMiddleware
+
 # 导入 JSON 响应类，用于返回自定义状态码的 JSON 数据
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+
 # 导入 SQLAlchemy 的 text 函数，用于执行原始 SQL 语句
 from sqlalchemy import text
 
 # 导入重定向路由（处理短链接跳转的核心路由）
 from app.api.redirect import router as redirect_router
+
 # 导入 API v1 版本的路由（包含认证、短链管理等接口）
 from app.api.v1.router import api_router
+
 # 导入应用配置对象，包含所有环境变量和配置项
 from app.core.config import settings
-# 导入静态文件和SPA路由支持
-from pathlib import Path
-from fastapi.staticfiles import StaticFiles
+
 # 导入日志配置函数和日志获取函数
 from app.core.logging import configure_logging, get_logger
+
 # 导入 Redis 客户端实例，用于缓存和限流
 from app.db.redis import redis_client
+
 # 导入数据库引擎实例，用于数据库操作
 from app.db.session import engine
+
 # 导入 Prometheus 监控中间件和指标端点
 from app.observability.metrics import PrometheusMiddleware, metrics_endpoint
 
@@ -70,7 +83,6 @@ def create_app() -> FastAPI:
         lifespan=lifespan,  # 绑定生命周期管理器（启动/关闭钩子）
         description=(  # 应用描述（显示在 API 文档首页）
             "一个面向生产的 URL 缩短器，带有点击分析、Redis 缓存和滑动窗口速率限制。"
-
         ),
         # 配置 Swagger UI 为中文界面
         swagger_ui_parameters={
@@ -172,11 +184,12 @@ def create_app() -> FastAPI:
     static_dir = Path(__file__).parent.parent / "static"
     if static_dir.exists():
         app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
-        
+
         # SPA 路由回退：非 API 和非静态文件请求都返回 index.html
         @app.get("/{path:path}", include_in_schema=False)
         async def serve_spa(path: str):
             from fastapi.responses import FileResponse
+
             index = static_dir / "index.html"
             if index.exists():
                 return FileResponse(index)
@@ -195,7 +208,7 @@ app = create_app()
 # 用法：python -m app.main 或 python app/main.py
 if __name__ == "__main__":
     import uvicorn
-    
+
     # 启动 Uvicorn 开发服务器
     uvicorn.run(
         "app.main:app",  # 应用路径：模块名:应用实例名
