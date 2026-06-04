@@ -5,6 +5,7 @@
 - POST /auth/register - 用户注册
 - POST /auth/login - 用户登录（OAuth2 标准）
 """
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -32,15 +33,15 @@ async def register(
 ) -> UserOut:
     """
     用户注册接口
-    
+
     Args:
         payload: 用户注册信息（邮箱和密码）
         service: 认证服务实例
         db: 数据库会话
-        
+
     Returns:
         UserOut: 创建成功的用户信息（不包含密码）
-        
+
     Raises:
         HTTPException 409: 邮箱已被注册
     """
@@ -52,10 +53,10 @@ async def register(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="Email already registered"
         ) from None
-    
+
     # 提交数据库事务，持久化用户数据
     await db.commit()
-    
+
     # 将用户对象转换为响应模型并返回
     return UserOut.model_validate(user)
 
@@ -66,19 +67,20 @@ async def register(
     dependencies=[Depends(enforce_rate_limit)],  # 应用限流保护，防止暴力破解
 )
 async def login(
-    form: Annotated[OAuth2PasswordRequestForm, Depends()],  # OAuth2 标准登录表单（username + password）
+    # OAuth2 标准登录表单（username + password）
+    form: Annotated[OAuth2PasswordRequestForm, Depends()],
     service: Annotated[AuthService, Depends(get_auth_service)],  # 依赖注入：获取认证服务实例
 ) -> Token:
     """
     用户登录接口（OAuth2 标准）
-    
+
     Args:
         form: OAuth2 登录表单，包含 username（邮箱）和 password
         service: 认证服务实例
-        
+
     Returns:
         Token: JWT 访问令牌
-        
+
     Raises:
         HTTPException 401: 用户名或密码错误
     """
@@ -92,6 +94,6 @@ async def login(
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},  # 标准的 OAuth2 响应头
         ) from None
-    
+
     # 返回 JWT token
     return Token(access_token=token)

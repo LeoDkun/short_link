@@ -1,4 +1,3 @@
-import re
 from pathlib import Path
 from typing import Annotated
 
@@ -17,13 +16,26 @@ from app.services.links import LinkService, record_click_task
 
 router = APIRouter(tags=["redirect"])
 
-# 短码格式。注意：必须和你的短码生成器一致！
-# 你日志里出现过 /QjA（字母开头、3 位），它并不符合下面这个正则。
-# 若短码可能以字母开头或更短，请放宽，例如 r"^[0-9A-Za-z]{3,16}$"
-_SHORT_CODE_RE = re.compile(r"^[0-9][0-9A-Za-z]{4,15}$")
+# 前端 SPA 的一级路由路径（与 frontend/src/router/index.js 保持一致）
+# 注意：这些词也应在创建短链时作为保留字拒绝，避免自定义别名遮住前端页面
+_FRONTEND_ROUTES = {"login", "register", "dashboard", "create"}
 
 # 前端构建产物目录：app/api/redirect.py 往上三级 -> D:\shortlink\static
 _STATIC_DIR = Path(__file__).resolve().parent.parent.parent / "static"
+
+
+def _spa_response():
+    """返回前端入口页；构建产物不存在时返回 404。"""
+    index = _STATIC_DIR / "index.html"
+    if index.exists():
+        return FileResponse(index)
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+
+@router.get("/analytics/{code}", include_in_schema=False)
+async def spa_analytics(code: str):
+    # 两段式前端路由（/analytics/xxx），直接访问或刷新时返回 SPA 入口
+    return _spa_response()
 
 
 @router.get("/{code}", include_in_schema=False)
@@ -45,12 +57,11 @@ async def redirect_or_spa(
             request.headers.get("user-agent"),
             request.client.host if request.client else None,
         )
-        return RedirectResponse(
-            url=target, status_code=status.HTTP_307_TEMPORARY_REDIRECT
-        )
+        return RedirectResponse(url=target, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
-    # 查不到 → 交给前端路由（/login、/dashboard 等走这里，未知路径由前端显示 404）
-    index = _STATIC_DIR / "index.html"
-    if index.exists():
-        return FileResponse(index)
+    # 前端一级路由（直接访问或刷新 /login 等）→ 返回 SPA 入口，由 Vue 接管
+    if code in _FRONTEND_ROUTES:
+        return _spa_response()
+
+    # 既不是有效短码，也不是前端路由 → 真 404
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")

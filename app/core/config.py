@@ -4,6 +4,7 @@ from functools import lru_cache
 
 # 导入 Pydantic v2 的核心组件
 from pydantic import Field, field_validator
+
 # 导入 Pydantic Settings，专门用于管理应用配置（从环境变量/.env 文件加载）
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -11,27 +12,27 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     """
     应用配置类，遵循 12-Factor App 原则。
-    
+
     配置加载优先级（从高到低）：
     1. 操作系统环境变量（如 export DATABASE_URL=...）
     2. .env 文件中的配置
     3. 类定义中的默认值
-    
+
     所有配置项都是类型安全的，Pydantic 会自动进行类型转换和验证。
     """
 
     # 配置 Pydantic Settings 的行为
     model_config = SettingsConfigDict(
-        env_file=".env",              # 从项目根目录的 .env 文件读取配置
-        env_file_encoding="utf-8",    # 支持中文注释等特殊字符
-        extra="ignore"                # 忽略 .env 中未定义的变量（不报错）
+        env_file=".env",  # 从项目根目录的 .env 文件读取配置
+        env_file_encoding="utf-8",  # 支持中文注释等特殊字符
+        extra="ignore",  # 忽略 .env 中未定义的变量（不报错）
     )
 
     # ==================== 应用基础配置 ====================
-    app_name: str = "ShortLink"                    # 应用名称（显示在 API 文档中）
-    environment: str = "development"               # 运行环境：development / staging / production
-    debug: bool = False                            # 是否开启调试模式（生产环境必须为 False）
-    base_url: str = "http://localhost:8000"        # 应用基础 URL，用于拼接完整的短链接地址
+    app_name: str = "ShortLink"  # 应用名称（显示在 API 文档中）
+    environment: str = "development"  # 运行环境：development / staging / production
+    debug: bool = False  # 是否开启调试模式（生产环境必须为 False）
+    base_url: str = "http://localhost:8000"  # 应用基础 URL，用于拼接完整的短链接地址
 
     # ==================== 数据库配置 ====================
     # 异步数据库连接字符串，支持两种驱动：
@@ -40,17 +41,18 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://shortlink:shortlink@localhost:5432/shortlink"
 
     # ==================== Redis 配置 ====================
-    redis_url: str = "redis://localhost:6379/0"    # Redis 连接地址（用于缓存和限流）
-    cache_ttl_seconds: int = 3600                  # 缓存过期时间（秒），默认 1 小时
+    redis_url: str = "redis://localhost:6379/0"  # Redis 连接地址（用于缓存和限流）
+    cache_ttl_seconds: int = 3600  # 缓存过期时间（秒），默认 1 小时
 
     # ==================== 安全配置 ====================
-    secret_key: str = "CHANGE_ME_IN_PRODUCTION"    # JWT 签名密钥（⚠️ 生产环境必须替换为强随机字符串）
-    access_token_expire_minutes: int = 60          # JWT Token 过期时间（分钟）
-    jwt_algorithm: str = "HS256"                   # JWT 签名算法（HMAC-SHA256）
+    # JWT 签名密钥（⚠️ 生产环境必须替换为强随机字符串）
+    secret_key: str = "CHANGE_ME_IN_PRODUCTION"
+    access_token_expire_minutes: int = 60  # JWT Token 过期时间（分钟）
+    jwt_algorithm: str = "HS256"  # JWT 签名算法（HMAC-SHA256）
 
     # ==================== 速率限制配置（滑动窗口算法）====================
-    rate_limit_requests: int = 100                 # 每个窗口允许的最大请求数
-    rate_limit_window_seconds: int = 60            # 滑动窗口大小（秒）
+    rate_limit_requests: int = 100  # 每个窗口允许的最大请求数
+    rate_limit_window_seconds: int = 60  # 滑动窗口大小（秒）
     # 示例：60 秒内最多允许 100 个请求，超出返回 429 Too Many Requests
 
     # ==================== CORS 跨域配置 ====================
@@ -66,10 +68,10 @@ class Settings(BaseSettings):
     def _split_cors(cls, v: object) -> object:
         """
         在 Pydantic 类型转换之前执行，处理 CORS 配置的格式转换。
-        
+
         Args:
             v: 原始值（可能是字符串或列表）
-        
+
         Returns:
             转换后的列表
         """
@@ -86,7 +88,7 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """
     获取应用配置的单例对象。
-    
+
     Returns:
         Settings 配置对象（全局唯一实例）
     """

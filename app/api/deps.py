@@ -78,7 +78,6 @@ def get_rate_limiter(redis=Depends(get_redis)) -> RateLimiter:
     return RateLimiter(redis)
 
 
-
 async def enforce_rate_limit(
     request: Request,
     limiter: Annotated[RateLimiter, Depends(get_rate_limiter)],
@@ -87,15 +86,13 @@ async def enforce_rate_limit(
     try:
         identifier = request.client.host if request.client else "anonymous"
         allowed, remaining = await limiter.hit(f"{request.url.path}:{identifier}")
-        if not allowed:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail="Rate limit exceeded",
-                headers={"Retry-After": str(limiter.window)},
-            )
     except Exception:
         # Redis 不可用时，跳过限流（开发环境友好）
         # 生产环境应该记录日志或监控此情况
-        pass
-
-
+        return
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Rate limit exceeded",
+            headers={"Retry-After": str(limiter.window)},
+        )
